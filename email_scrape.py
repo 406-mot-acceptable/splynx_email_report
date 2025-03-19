@@ -5,15 +5,11 @@ from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 import time
 
-##log file for testing
-##cred: https://github.com/GluuFederation/community-edition-setup/
-##fn -> file name param
-##s -> var param
-def writeFile(s, fn):
-    f = open(fn, 'w', encoding='utf-8')
-    f.write(s)
-    f.close()
-## function scrape_email start
+def write_append(fn, ttype, texts):
+    for i, ttype in enumerate(texts, 1):
+            with open(fn, "a", encoding='utf-8') as file:
+               file.write(f"{i}: {ttype}" + "\n")
+
 def scrape_email(url): 
     try:
         chrome_options = Options()
@@ -21,26 +17,37 @@ def scrape_email(url):
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-        
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
         driver.get(url)
-        ## allow time for js to render
         time.sleep(5)  
-        
         soup = BeautifulSoup(driver.page_source, 'html.parser')
         driver.quit()
-        writeFile(soup.prettify(), "raw_scrape") #log raw_scrape
-
-        email_content = soup.get_text(separator='\n', strip=True)
-        writeFile(email_content, "format_scrape") #log format_scrape
-        ## function scrape_email end;
-        return email_content
-    ## catch 
+        return soup
     except Exception as e:
         print(f"Error in scrape_email: {e}")
         return None 
 
+def scrape_body():
+    soup = raw_email
+    body_ele = soup.find_all("div", class_="ticket-message-body message-with-blockquote")
+    body_texts = [email_body.get_text(separator=' ', strip=True) for email_body in body_ele]
+    write_append("body_scrape", "body", body_texts)
+
+def scrape_auth():
+    soup = raw_email
+    auth_ele = soup.find_all("strong", class_="comment-title")
+    auth_texts = [email_auth.get_text(separator=' ', strip=True) for email_auth in auth_ele]
+    write_append("auth_scrape", "auth", auth_texts)
+
+def scrape_time():
+    soup = raw_email
+    time_ele = soup.find_all("time", class_="text-muted timeago")
+    time_texts = [email_time.get_text(separator=' ', strip=True) for email_time in time_ele]
+    write_append("time_scrape", "time", time_texts)
+
 ## Test URL (Replace with actual email page URL)
 if __name__ == "__main__":
-    test_url = "https://portal.datonet.co.za/public/tickets?ticket=T0RFMU5qWmxPRGhrWXpCak1XTXpaZGlOYjV3Z3l1Nm5nMnB1cXZvbjhOQT0"
-    scrape_email(test_url)
+    raw_email = scrape_email("https://portal.datonet.co.za/public/tickets?ticket=T0RFMU5qWmxPRGhrWXpCak1XTXpaZGlOYjV3Z3l1Nm5nMnB1cXZvbjhOQT0")
+    scrape_body()
+    scrape_auth()
+    scrape_time()
